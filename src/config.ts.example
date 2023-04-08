@@ -1,0 +1,6 @@
+export default {
+	pteroBaseApi: "https://pterodactyl.home/api/application",
+	pteroApiKey: "ptla_123",
+
+	discordBotToken: "",
+}
