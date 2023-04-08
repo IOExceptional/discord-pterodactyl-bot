@@ -8,11 +8,11 @@ const pteroApiKey = config.pteroApiKey;
 
 const token = config.discordBotToken;
 
-const client: Client & { commands?: any } = new Client({ intents: [Intents.FLAGS.GUILDS] });
+const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
 client.on('interactionCreate', (interaction): Promise<void> => handleCommand(interaction));
 client.once('ready', (e) => {
-	console.log("Logged in")
+	console.log("Logged in");
 	registerCommands();
 });
 
