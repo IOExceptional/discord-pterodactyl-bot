@@ -1,5 +1,0 @@
-export default {
-	pteroBaseApi: "https://pterodactyl.home/api",
-	pteroApiClientKey: "ptlc_123"
-	discordBotToken: "",
-}

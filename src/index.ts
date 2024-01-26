@@ -1,11 +1,10 @@
 import {  Client, Intents } from 'discord.js';
 import axios from 'axios';
 
-import config from './config';
 
-const pteroBaseApi = config.pteroBaseApi || process.env.BASE_API;
-const pteroApiClientKey = config.pteroApiClientKey  || process.env.CLIENT_API_KEY;
-const token = config.discordBotToken || process.env.DISCORD_BOT_TOKEN;
+const pteroBaseApi = process.env.BASE_API;
+const pteroApiClientKey = process.env.CLIENT_API_KEY;
+const token = process.env.DISCORD_BOT_TOKEN;
 
 interface ServerList {
 	data: {
