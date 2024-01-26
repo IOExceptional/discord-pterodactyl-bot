@@ -3,11 +3,29 @@ import axios from 'axios';
 
 import config from './config';
 
-const pteroBaseApi = config.pteroBaseApi;
-const pteroApiKey = config.pteroApiKey;
-const pteroApiClientKey = config.pteroApiClientKey;
+const pteroBaseApi = config.pteroBaseApi || process.env.BASE_API;
+const pteroApiClientKey = config.pteroApiClientKey  || process.env.CLIENT_API_KEY;
+const token = config.discordBotToken || process.env.DISCORD_BOT_TOKEN;
 
-const token = config.discordBotToken;
+interface ServerList {
+	data: {
+		attributes: {
+			id: string,
+			uuid: string,
+			name: string,
+			relationships: {
+				allocations: {
+					data: {
+						attributes: {
+							ip: string,
+							port: number,
+						}
+					} []
+				}
+			}
+		}
+	} [],
+}
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
@@ -36,25 +54,16 @@ const handleCommand = async (interaction: any) => {
 const listServers = async (interaction: any) => {
 	try {
 		await interaction.reply({
-			content: "Fetching servers",
-			ephemeral: true,
+			content: "Fetching servers...",
 		});
 
-		const serversReply = await axios(pteroBaseApi + "/application/servers/", {
+		const serversReply = await axios(pteroBaseApi + "/client/", {
 			headers: {
-				'Authorization': "Bearer " + pteroApiKey,
+				'Authorization': "Bearer " + pteroApiClientKey,
 			}
 		});
-	
-		const serversList: {
-			data: {
-				attributes: {
-					id: string,
-					uuid: string,
-					name: string,
-				}
-			} [],
-		} = serversReply.data;
+
+		const serversList: ServerList = serversReply.data;
 
 		const serverStatuses = await Promise.all(serversList.data.map(async (server) => {
 			const serverResourcesReply = await axios(pteroBaseApi + `/client/servers/${server.attributes.uuid}/resources`, {
@@ -70,17 +79,16 @@ const listServers = async (interaction: any) => {
 				name: server.attributes.name,
 				uuid: server.attributes.uuid,
 				status,
+				port: server.attributes.relationships.allocations.data[0].attributes.port,
 			};
 		}));
 	
 		const servers = serverStatuses.map((server) => {
-			return `Name: ${server.name}
-	ID:    \`${server.id}\`
-	UUID:    \`${server.uuid}\`
-	Online: ${server.status !== 'offline'}`;
+			return `**${server.name}** (${server.status} ${server.status === "running" ? "🟢" : "🔴"})
+	ID:    \`${server.uuid}\`
+	Port: \`play.ioe.gg:${server.port}\``;
 		});
 
-		// console.log(servers);
 		await interaction.editReply({
 			content: servers.join("\n\n"),
 			ephemeral: true,
@@ -98,8 +106,7 @@ const startServer = async (interaction: any) => {
 	const serverId = interaction.options.getString('id');
 	try {
 		interaction.reply({
-			content: "Starting server",
-			ephemeral: true,
+			content: "Starting server...",
 		});
 		await axios(pteroBaseApi + `/client/servers/${serverId}/power`, {
 			headers: {
@@ -127,8 +134,7 @@ const stopServer = async (interaction: any) => {
 	const serverId = interaction.options.getString('id');
 	try {
 		await interaction.reply({
-			content: "Stopping server",
-			ephemeral: true,
+			content: "Stopping server...",
 		});
 		await axios(pteroBaseApi + `/client/servers/${serverId}/power`, {
 			headers: {
