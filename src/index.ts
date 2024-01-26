@@ -5,6 +5,7 @@ import config from './config';
 
 const pteroBaseApi = config.pteroBaseApi;
 const pteroApiKey = config.pteroApiKey;
+const pteroApiClientKey = config.pteroApiClientKey;
 
 const token = config.discordBotToken;
 
@@ -34,8 +35,12 @@ const handleCommand = async (interaction: any) => {
 
 const listServers = async (interaction: any) => {
 	try {
+		await interaction.reply({
+			content: "Fetching servers",
+			ephemeral: true,
+		});
 
-		const serversReply = await axios(pteroBaseApi + "/servers/", {
+		const serversReply = await axios(pteroBaseApi + "/application/servers/", {
 			headers: {
 				'Authorization': "Bearer " + pteroApiKey,
 			}
@@ -45,25 +50,44 @@ const listServers = async (interaction: any) => {
 			data: {
 				attributes: {
 					id: string,
+					uuid: string,
 					name: string,
-					suspended: string | null
 				}
 			} [],
 		} = serversReply.data;
+
+		const serverStatuses = await Promise.all(serversList.data.map(async (server) => {
+			const serverResourcesReply = await axios(pteroBaseApi + `/client/servers/${server.attributes.uuid}/resources`, {
+				headers: {
+					'Authorization': "Bearer " + pteroApiClientKey,
+				}
+			});
+
+			const status = serverResourcesReply.data.attributes.current_state;
+
+			return {
+				id: server.attributes.id,
+				name: server.attributes.name,
+				uuid: server.attributes.uuid,
+				status,
+			};
+		}));
 	
-		const servers = serversList.data.map((server) => {
-			return `Name: ${server.attributes.name}
-	ID:    \`${server.attributes.id}\`
-	Online: ${!server.attributes.suspended}`;
+		const servers = serverStatuses.map((server) => {
+			return `Name: ${server.name}
+	ID:    \`${server.id}\`
+	UUID:    \`${server.uuid}\`
+	Online: ${server.status !== 'offline'}`;
 		});
-	
-		await interaction.reply({
+
+		// console.log(servers);
+		await interaction.editReply({
 			content: servers.join("\n\n"),
 			ephemeral: true,
 		});
 	} catch (e) {
 		console.log(e);
-		await interaction.reply({
+		await interaction.editReply({
 			content: "There was a problem fetching the SERVZ",
 			ephemeral: true,
 		});
@@ -73,18 +97,26 @@ const listServers = async (interaction: any) => {
 const startServer = async (interaction: any) => {
 	const serverId = interaction.options.getString('id');
 	try {
-		await axios(pteroBaseApi + `/servers/${serverId}/unsuspend`, {
+		interaction.reply({
+			content: "Starting server",
+			ephemeral: true,
+		});
+		await axios(pteroBaseApi + `/client/servers/${serverId}/power`, {
 			headers: {
-				'Authorization': "Bearer " + pteroApiKey,
+				'Authorization': "Bearer " + pteroApiClientKey,
+			},
+			method: 'POST',
+			data: {
+				signal: "start",
 			}
 		});
 	
-		await interaction.reply({
-			content: "Server starting",
+		await interaction.editReply({
+			content: "Server started",
 			ephemeral: true,
 		});
 	} catch (e) {
-		await interaction.reply({
+		await interaction.editReply({
 			content: "There was a problem starting",
 			ephemeral: true,
 		});
@@ -94,19 +126,27 @@ const startServer = async (interaction: any) => {
 const stopServer = async (interaction: any) => {
 	const serverId = interaction.options.getString('id');
 	try {
-		await axios(pteroBaseApi + `/servers/${serverId}/suspend`, {
+		await interaction.reply({
+			content: "Stopping server",
+			ephemeral: true,
+		});
+		await axios(pteroBaseApi + `/client/servers/${serverId}/power`, {
 			headers: {
-				'Authorization': "Bearer " + pteroApiKey,
+				'Authorization': "Bearer " + pteroApiClientKey,
+			},
+			method: 'POST',
+			data: {
+				signal: "stop",
 			}
 		});
 	
-		await interaction.reply({
-			content: "Server starting",
+		await interaction.editReply({
+			content: "Server Stopped",
 			ephemeral: true,
 		});
 	} catch (e) {
-		await interaction.reply({
-			content: "There was a problem starting",
+		await interaction.editReply({
+			content: "There was a problem stopping",
 			ephemeral: true,
 		});
 	}
