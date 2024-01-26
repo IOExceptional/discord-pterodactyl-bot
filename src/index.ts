@@ -27,6 +27,24 @@ interface ServerList {
 	} [],
 }
 
+interface ServerReply {
+	attributes: {
+		id: string,
+		uuid: string,
+		name: string,
+		relationships: {
+			allocations: {
+				data: {
+					attributes: {
+						ip: string,
+						port: number,
+					}
+				} []
+			}
+		}
+	}
+}
+
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
 client.on('interactionCreate', (interaction): Promise<void> => handleCommand(interaction));
@@ -102,12 +120,27 @@ const listServers = async (interaction: any) => {
 	}
 }
 
+const fetchServer = async (serverId: string): Promise<ServerReply> => {
+	const serverResourcesReply = await axios(pteroBaseApi + `/client/servers/${serverId}`, {
+		headers: {
+			'Authorization': "Bearer " + pteroApiClientKey,
+		}
+	});
+
+	// console.log(serverResourcesReply.data);
+
+	return serverResourcesReply.data;
+}
+
 const startServer = async (interaction: any) => {
 	const serverId = interaction.options.getString('id');
 	try {
 		interaction.reply({
 			content: "Starting server...",
 		});
+
+		const serverReply = await fetchServer(serverId);
+
 		await axios(pteroBaseApi + `/client/servers/${serverId}/power`, {
 			headers: {
 				'Authorization': "Bearer " + pteroApiClientKey,
@@ -119,10 +152,11 @@ const startServer = async (interaction: any) => {
 		});
 	
 		await interaction.editReply({
-			content: "Server started",
+			content: `Started **${serverReply.attributes.name}** 🟢`,
 			ephemeral: true,
 		});
 	} catch (e) {
+		console.error(e);
 		await interaction.editReply({
 			content: "There was a problem starting",
 			ephemeral: true,
@@ -136,6 +170,9 @@ const stopServer = async (interaction: any) => {
 		await interaction.reply({
 			content: "Stopping server...",
 		});
+
+		const serverReply = await fetchServer(serverId);
+
 		await axios(pteroBaseApi + `/client/servers/${serverId}/power`, {
 			headers: {
 				'Authorization': "Bearer " + pteroApiClientKey,
@@ -147,10 +184,11 @@ const stopServer = async (interaction: any) => {
 		});
 	
 		await interaction.editReply({
-			content: "Server Stopped",
+			content: `Stopped **${serverReply.attributes.name}** 🔴`,
 			ephemeral: true,
 		});
 	} catch (e) {
+		console.error(e);
 		await interaction.editReply({
 			content: "There was a problem stopping",
 			ephemeral: true,
